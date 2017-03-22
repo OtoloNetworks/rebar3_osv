@@ -51,6 +51,10 @@ do(State) ->
          NewImage = filename:join([OutDir, App ++ ".img"]),
          {ok, Size} = file:copy(OrigImage, NewImage),
 
+         %% Step 1a - alter command line
+         osv_tools:set_cmdline(NewImage,
+                               "--norandom --noinit /tools/cpiod.so; /zfs.so set compression=off osv"),
+
          %% Step 2 - Start the qemu system with the NewImage...
          QemuCmd = "qemu-system-x86_64 -m 512 -smp 1 -vnc none -gdb tcp::1234,server,nowait "
              ++ "-device virtio-blk-pci,id=blk0,bootindex=0,drive=hd0,scsi=off "
@@ -59,17 +63,28 @@ do(State) ->
              ++ "-device virtio-net-pci,netdev=un0 -redir tcp:10000::10000 -device virtio-rng-pci "
              ++ "-enable-kvm -cpu host,+x2apic -chardev stdio,mux=on,id=stdio,signal=on "
              ++ "-mon chardev=stdio,mode=readline,default -device isa-serial,chardev=stdio",
-         R = exec:run(QemuCmd, []),
+         {ok, QPid, QOSPid} = exec:run(QemuCmd, [monitor,
+                                                {stdout, "/tmp/osv-cpio-output"}]),
 
          %% Step 3 - CPIO in the release into the OTP directory
          {ok, S} = osv_tools:cpio_start(),
          ok = osv_tools:cpio(S, ReleaseDir, "/otp"),
          ok = osv_tools:cpio_link(S, ERTS, "/otp/erts"),
-         ok = osv_tools:cpio_file(S, filename:join([PrivDir, "start-otp.so"]), "/start-otp.so"),
+         ok = osv_tools:cpio_file(S, filename:join([PrivDir, "start-otp.so"]), "start-otp.so"),
          ok = osv_tools:cpio_end(S),
 
-         %% Step 4 - set the command line...
-         ok = osv_tools:set_cmdline(NewImage, "/start-otp.so")
+         %% Wait on the Qemu image to terminate
+         receive
+             {'DOWN', QOSPid, process, QPid, normal} ->
+                 %% Step 4 - set the command line...
+                 ok = osv_tools:set_cmdline(NewImage, "/start-otp.so");
+             {'DOWN', QOSPid, process, QPid, FailReason} ->
+                 rebar_log:log(error, "Qemu failed: ~p~n", [FailReason]),
+                 throw(qemu_error)
+         after 10000 ->
+                 rebar_log:log(error, "Qemu failed"),
+                 throw(qemu_timeout)
+         end
 
      end || AppInfo <- Apps],
 

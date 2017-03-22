@@ -49,7 +49,6 @@ cpio_link(Sock, Orig, Link) ->
     ok.
 
 cpio_file(Sock, File, Name) ->
-    io:format("File: ~p Name ~p~n", [File, Name]),
     {ok, Bytes} = file:read_file(File),
     gen_tcp:send(Sock, pad(cpio_header(Name, ?C_ISREG bor (8#777),
                                        byte_size(Bytes), #state{}))),
@@ -57,11 +56,10 @@ cpio_file(Sock, File, Name) ->
     ok.
 
 set_cmdline(Image, Cmdline) ->
-    {ok, FH} = file:open(Image, [raw,read,write]),
-    {ok, ?ARGS_OFFSET} = file:position(FH, ?ARGS_OFFSET),
-    file:write(FH, Cmdline),
-    file:write(FH, <<0:8>>),
-    file:close(FH),
+    C = erlang:list_to_binary(Cmdline),
+    {ok, S1} = nbd_client:start(Image),
+    {0, S2} = nbd_client:write(<<C/binary, 0:8>>, ?ARGS_OFFSET, S1),
+    nbd_client:disconnect(S2),
     ok.
 
 %%====================================================================
@@ -76,7 +74,7 @@ connect(Count) ->
                          [binary, {packet, raw}]) of
         {ok, Sock} ->
             {ok, Sock};
-        Error ->
+        _Error ->
             timer:sleep(?CONNECT_WAIT),
             connect(Count-1)
     end.
