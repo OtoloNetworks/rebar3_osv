@@ -34,6 +34,7 @@ do(State) ->
                   AppInfo ->
                       [AppInfo]
               end,
+    %% io:format("Apps: ~p~n", [Apps]),
     [begin
          %% Setup stuff
          App = erlang:binary_to_list(rebar_app_info:name(AppInfo)),
@@ -77,7 +78,10 @@ do(State) ->
          receive
              {'DOWN', QOSPid, process, QPid, normal} ->
                  %% Step 4 - set the command line...
-                 ok = osv_tools:set_cmdline(NewImage, "/start-otp.so");
+                 Vsn = rebar_app_info:original_vsn(AppInfo),
+                 CmdLine = lists:flatten(
+                             io_lib:format("/start-otp.so /otp/releases/~s/~s /otp/releases/~s/vm.args", [Vsn, App, Vsn])),
+                 ok = osv_tools:set_cmdline(NewImage, CmdLine);
              {'DOWN', QOSPid, process, QPid, FailReason} ->
                  rebar_log:log(error, "Qemu failed: ~p~n", [FailReason]),
                  throw(qemu_error)
