@@ -50,22 +50,24 @@ do(State) ->
          %% Step 1 - make a copy of the OSv image we're using..
          OrigImage = filename:join([PrivDir, "OSv.img"]),
          NewImage = filename:join([OutDir, App ++ ".img"]),
-         {ok, Size} = file:copy(OrigImage, NewImage),
+         {ok, _Size} = file:copy(OrigImage, NewImage),
 
          %% Step 1a - alter command line
          osv_tools:set_cmdline(NewImage,
                                "--norandom --noinit /tools/cpiod.so; /zfs.so set compression=off osv"),
 
          %% Step 2 - Start the qemu system with the NewImage...
-         QemuCmd = "qemu-system-x86_64 -m 512 -smp 1 -vnc none -gdb tcp::1234,server,nowait "
+         QemuCmd = "qemu-system-x86_64 -m 512 -smp 1 -vnc none "
+             %% ++ "-gdb tcp::1234,server,nowait "
              ++ "-device virtio-blk-pci,id=blk0,bootindex=0,drive=hd0,scsi=off "
              ++ "-drive file=" ++ NewImage ++ ",if=none,id=hd0,cache=unsafe,aio=threads "
              ++ "-netdev user,id=un0,net=192.168.122.0/24,host=192.168.122.1 "
              ++ "-device virtio-net-pci,netdev=un0 -redir tcp:10000::10000 -device virtio-rng-pci "
              ++ "-enable-kvm -cpu host,+x2apic -chardev stdio,mux=on,id=stdio,signal=on "
              ++ "-mon chardev=stdio,mode=readline,default -device isa-serial,chardev=stdio",
-         {ok, QPid, QOSPid} = exec:run(QemuCmd, [monitor,
-                                                {stdout, "/tmp/osv-cpio-output"}]),
+         {ok, QPid, QOSPid} = exec:run(QemuCmd, [monitor
+                                                 %%, {stdout, "/tmp/osv-cpio-output"}
+                                                ]),
 
          %% Step 3 - CPIO in the release into the OTP directory
          {ok, S} = osv_tools:cpio_start(),
@@ -81,7 +83,9 @@ do(State) ->
                  Vsn = rebar_app_info:original_vsn(AppInfo),
                  CmdLine = lists:flatten(
                              io_lib:format("/start-otp.so /otp/releases/~s/~s /otp/releases/~s/vm.args", [Vsn, App, Vsn])),
-                 ok = osv_tools:set_cmdline(NewImage, CmdLine);
+                 ok = osv_tools:set_cmdline(NewImage, CmdLine),
+                 rebar_log:log(info, "OSv image built: ~s", [NewImage]),
+                 rebar_log:log(info, "Command Line: ~s", [CmdLine]);
              {'DOWN', QOSPid, process, QPid, FailReason} ->
                  rebar_log:log(error, "Qemu failed: ~p~n", [FailReason]),
                  throw(qemu_error)
@@ -89,7 +93,6 @@ do(State) ->
                  rebar_log:log(error, "Qemu failed"),
                  throw(qemu_timeout)
          end
-
      end || AppInfo <- Apps],
 
     {ok, State}.

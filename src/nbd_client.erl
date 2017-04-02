@@ -34,7 +34,7 @@ start(File) ->
     rand:seed(exsplus, {I1, I2, I3}),
     Port = 10000 + rand:uniform(60000-10000),
     Cmd = lists:flatten(io_lib:format("qemu-nbd -p ~p ~s", [Port, File])),
-    {ok, QPid, OSPid} = exec:run(Cmd, [monitor]),
+    {ok, QPid, _OSPid} = exec:run(Cmd, [monitor]),
     
     %% Now to connect to the process...
     {ok, Sock} = connect(Port),
@@ -49,7 +49,7 @@ handle_initial_handshake(#nbd{socket = Sock} = State) ->
     {ok, _} = gen_tcp:recv(Sock, 124),
     State#nbd{flags = Flags, size = Size}.
 
-write(Data, Offset, #nbd{socket = Sock} = State) ->
+write(Data, Offset, #nbd{} = State) ->
     %% First step is to read in the sectors that include our target block...
     Len = byte_size(Data),
     {Sector, SOffset} = map_offset(Offset),
@@ -69,8 +69,8 @@ disconnect(#nbd{socket = Sock} = State) ->
     gen_tcp:close(Sock),
     ok.
 
-read(Offset, Len, #nbd{socket = Sock, request = ReqId} = State) ->
-    {Sector, SOffset} = map_offset(Offset),
+read(Offset, Len, #nbd{} = State) ->
+    {_Sector, SOffset} = map_offset(Offset),
     ToRead = map_round(Len + SOffset),
     send_request(build_header(read, Offset, ToRead, State), State),
     parse_reply(ToRead, State).
@@ -81,14 +81,14 @@ send_request(Request, #nbd{socket = Sock}) ->
 connect(Port) ->
     connect(Port, ?CONNECT_RETRY).
 
-connect(Port, 0) ->
+connect(_Port, 0) ->
     connection_failed;
 connect(Port, Count) ->
     case gen_tcp:connect("localhost", Port,
                          [binary, {active, false}, {packet, raw}]) of
         {ok, Sock} ->
             {ok, Sock};
-        Error ->
+        _Error ->
             timer:sleep(?CONNECT_WAIT),
             connect(Port, Count-1)
     end.
