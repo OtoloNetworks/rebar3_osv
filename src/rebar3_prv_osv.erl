@@ -2,7 +2,7 @@
 
 -export([init/1, do/1, format_error/1]).
 
--define(PROVIDER, compile).
+-define(PROVIDER, generate).
 -define(NAMESPACE, osv).
 -define(DEPS, [{default, app_discovery}]).
 
@@ -17,7 +17,7 @@ init(State) ->
             {module, ?MODULE},
             {bare, true},
             {deps, ?DEPS},
-            {example, "rebar3 osv compiler"},
+            {example, "rebar3 osv generate"},
             {opts, []},
             {short_desc, "An OSv image generator"},
             {desc, ""}
