@@ -21,8 +21,8 @@ int main(int argc, char **argv){
   setenv("ERL_INETRC", "/etc/default/erlang/inetrc", false);
   setenv("RICKP_DEBUG", "yes", false);
 
-  if (argc != 3) {
-    fprintf(stderr, "exactly two arguments required\n");
+  if (argc != 4) {
+    fprintf(stderr, "exactly three arguments required\n");
     exit(1);
   }
 
@@ -36,9 +36,10 @@ int main(int argc, char **argv){
 
   int (*mainfun)(int, char **) = (int (*)(int, char **)) dlsym(elf_handle, "main");
 
-  char *erl_argv[] = {"erlexec", "-args_file", argv[2], "-boot", argv[1], "-mode", "embedded", NULL};
+  char *erl_argv[] = {"erlexec", "-args_file", argv[2], "-boot", argv[1], "-config", argv[3],
+                      "-mode", "embedded", NULL};
 
-  int result = (mainfun)?mainfun(7, erl_argv):1;
+  int result = (mainfun)?mainfun(9, erl_argv):1;
   dlclose(elf_handle);
 
   if(!mainfun)

@@ -4,7 +4,7 @@
 
 -define(PROVIDER, generate).
 -define(NAMESPACE, osv).
--define(DEPS, [{default, app_discovery}]).
+-define(DEPS, [{default, app_discovery}, {default, release}]).
 
 %% ===================================================================
 %% Public API
@@ -82,7 +82,9 @@ do(State) ->
                  %% Step 4 - set the command line...
                  Vsn = rebar_app_info:original_vsn(AppInfo),
                  CmdLine = lists:flatten(
-                             io_lib:format("/start-otp.so /otp/releases/~s/~s /otp/releases/~s/vm.args", [Vsn, App, Vsn])),
+                             io_lib:format("/start-otp.so /otp/releases/~s/~s "
+                                           ++ "/otp/releases/~s/vm.args /otp/releases/~s/sys.config",
+                                           [Vsn, App, Vsn, Vsn])),
                  ok = osv_tools:set_cmdline(NewImage, CmdLine),
                  rebar_log:log(info, "OSv image built: ~s", [NewImage]),
                  rebar_log:log(info, "Command Line: ~s", [CmdLine]);
