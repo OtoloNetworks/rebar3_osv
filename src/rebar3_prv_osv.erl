@@ -43,6 +43,7 @@ do(State) ->
          PrivDir = code:priv_dir(rebar3_osv),
          Params = rebar_state:get(State, relx, []),
          Verbose =  proplists:get_value(verbose, Params, false),
+         AdditionalCmdLine = proplists:get_value(command_line, Params, ""),
 
          %% Select an ERTS to use, so we can symlink it to /otp/erts later...
          {ok, Files} = file:list_dir(ReleaseDir),
@@ -85,11 +86,13 @@ do(State) ->
              {'DOWN', QOSPid, process, QPid, normal} ->
                  %% Step 4 - set the command line...
                  Vsn = rebar_app_info:original_vsn(AppInfo),
-                 CmdLine = lists:flatten(
-                             io_lib:format("~s/start-otp.so /otp/releases/~s/~s "
-                                           ++ "/otp/releases/~s/vm.args /otp/releases/~s/sys.config",
-                                           [case Verbose of true -> "--verbose "; _ -> "" end,
-                                            Vsn, App, Vsn, Vsn])),
+                 CmdLine =
+                     lists:flatten(
+                       io_lib:format("~s~s/start-otp.so /otp/releases/~s/~s "
+                                     ++ "/otp/releases/~s/vm.args /otp/releases/~s/sys.config",
+                                     [AdditionalCmdLine,
+                                      case Verbose of true -> "--verbose "; _ -> "" end,
+                                      Vsn, App, Vsn, Vsn])),
                  ok = osv_tools:set_cmdline(NewImage, CmdLine),
                  rebar_log:log(info, "OSv image built: ~s", [NewImage]),
                  rebar_log:log(info, "Command Line: ~s", [CmdLine]);
