@@ -41,6 +41,8 @@ do(State) ->
          OutDir = rebar_dir:base_dir(State),
          ReleaseDir = filename:join([rebar_dir:base_dir(State), "rel", App]),
          PrivDir = code:priv_dir(rebar3_osv),
+         Params = rebar_state:get(State, relx, []),
+         Verbose =  proplists:get_value(verbose, Params, false),
 
          %% Select an ERTS to use, so we can symlink it to /otp/erts later...
          {ok, Files} = file:list_dir(ReleaseDir),
@@ -48,8 +50,10 @@ do(State) ->
          ERTS = "/otp/" ++ hd(ERTSdirs),
 
          %% Step 1 - make a copy of the OSv image we're using..
-         OrigImage = filename:join([PrivDir, "OSv.img"]),
+         BaseImage = filename:join([PrivDir, "OSv.img"]),
+         OrigImage = proplists:get_value(osv_image, Params, BaseImage),
          NewImage = filename:join([OutDir, App ++ ".img"]),
+         rebar_log:log(info, "Using base OSv Image ~s", [OrigImage]),
          {ok, _Size} = file:copy(OrigImage, NewImage),
 
          %% Step 1a - alter command line
@@ -82,9 +86,10 @@ do(State) ->
                  %% Step 4 - set the command line...
                  Vsn = rebar_app_info:original_vsn(AppInfo),
                  CmdLine = lists:flatten(
-                             io_lib:format("/start-otp.so /otp/releases/~s/~s "
+                             io_lib:format("~s/start-otp.so /otp/releases/~s/~s "
                                            ++ "/otp/releases/~s/vm.args /otp/releases/~s/sys.config",
-                                           [Vsn, App, Vsn, Vsn])),
+                                           [case Verbose of true -> "--verbose "; _ -> "" end,
+                                            Vsn, App, Vsn, Vsn])),
                  ok = osv_tools:set_cmdline(NewImage, CmdLine),
                  rebar_log:log(info, "OSv image built: ~s", [NewImage]),
                  rebar_log:log(info, "Command Line: ~s", [CmdLine]);
