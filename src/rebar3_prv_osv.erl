@@ -79,6 +79,8 @@ do(State) ->
          ok = osv_tools:cpio(S, ReleaseDir, "/otp"),
          ok = osv_tools:cpio_link(S, ERTS, "/otp/erts"),
          ok = osv_tools:cpio_file(S, filename:join([PrivDir, "start-otp.so"]), "start-otp.so"),
+         ok = osv_tools:cpio_file(S, filename:join([PrivDir, "inetrc"]), "/etc/default/erlang/inetrc"),
+         ok = osv_tools:cpio_file(S, filename:join([PrivDir, "resolv.conf"]), "/etc/resolv.conf"),
          ok = osv_tools:cpio_end(S),
 
          %% Wait on the Qemu image to terminate
@@ -99,7 +101,7 @@ do(State) ->
              {'DOWN', QOSPid, process, QPid, FailReason} ->
                  rebar_log:log(error, "Qemu failed: ~p~n", [FailReason]),
                  throw(qemu_error)
-         after 10000 ->
+         after 20000 ->
                  rebar_log:log(error, "Qemu failed"),
                  throw(qemu_timeout)
          end
