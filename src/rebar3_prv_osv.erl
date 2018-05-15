@@ -68,7 +68,7 @@ do(State) ->
              ++ "-drive file=" ++ NewImage ++ ",if=none,id=hd0,cache=unsafe,aio=threads "
              ++ "-netdev user,id=un0,net=192.168.122.0/24,host=192.168.122.1 "
              ++ "-device virtio-net-pci,netdev=un0 -redir tcp:10000::10000 -device virtio-rng-pci "
-             ++ "-enable-kvm -cpu host,+x2apic -chardev stdio,mux=on,id=stdio,signal=on "
+             ++ "-cpu qemu64,+x2apic -chardev stdio,mux=on,id=stdio,signal=on "
              ++ "-mon chardev=stdio,mode=readline,default -device isa-serial,chardev=stdio",
          {ok, QPid, QOSPid} = exec:run(QemuCmd, [monitor
                                                  %%, {stdout, "/tmp/osv-cpio-output"}
