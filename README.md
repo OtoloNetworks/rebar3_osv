@@ -14,13 +14,15 @@ Use
 Add the plugin to your rebar config:
 
     {plugins, [
-        { rebar3_osv, ".*", {git, "https://github.com/OtoloNetworks/rebar3_osv", {branch, "master"}}}
+        { rebar3_osv, ".*", {git, "https://github.com/OtoloNetworks/rebar3_osv", {tag, "OTP-21.0"}}}
     ]}.
 
 You require an Erlang/OTP installation compatible with OSv. The simplest way to get that is to check out the pre-compiled version from Github:
 
+    # An example, use whatever location suites you - reference
+    # it in the rebar.config!
     cd /usr/local/packages
-    git clone https://github.com/OtoloNetworks/otp-osv.git
+    git clone --branch OTP-21.0 https://github.com/OtoloNetworks/otp-osv.git
  
 You need to specifiy a couple of things for relx, such as where the
 OSv specific ERTS is located. rebar3_osv includes a base OSv image,
@@ -34,9 +36,8 @@ command line used to start applications, turn on 'verbose' output etc. See below
         {relx, [
                 {dev_mode, false}
                , {include_src, false}
-               , {include_erts, "/usr/local/packages/otp-osv/usr/lib64/erlang"}
-               , {system_libs, "/usr/local/packages/otp-osv/usr/lib64/erlang"}
-               %% , {osv_image, "/home/rickp/src/osv/build/release.x64/usr.img"}
+               , {include_erts, "/usr/local/packages/otp-osv"}
+               , {system_libs, "/usr/local/packages/otp-osv"}
                %% , {verbose, true}
                ]
         }]
@@ -106,8 +107,8 @@ download and compile Erlang/OTP to get going with this.
 Limitations
 ===========
 
- 1. rebar3_osv must be run on Linux x86_64, as the release is uploaded by running the image under kvm/qemu and transfering in the releae files.
- 2. Needs to use the modified OTP (currently based on 18.3.4.4 - we are working to make this easier)
+ 1. rebar3_osv must be run on Linux x86_64, as the release is uploaded by running the image under kvm/qemu and transfering in the release files.
+ 2. Needs to use the modified OTP (currently based on 21.0) and this needs to match that installed on the system
  3. Ports are not supported
  4. NIFs are supported but may need compiling -fpie (the default on many distributions)
 
