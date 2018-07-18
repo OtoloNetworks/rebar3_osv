@@ -3,10 +3,7 @@ rebar3_osv
 
 Turn an Erlang/OTP application release into a OSv-based Unikernel image (with a few notable exceptions).
 
-Build
------
-
-    $ rebar3 compile
+[![asciicast](https://asciinema.org/a/B7y3tS4tu8b50tpzTuCbU5SvF.png)](https://asciinema.org/a/B7y3tS4tu8b50tpzTuCbU5SvF)
 
 Use
 ---
