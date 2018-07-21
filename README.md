@@ -24,7 +24,8 @@ You require an Erlang/OTP installation compatible with OSv. The simplest way to 
 You need to specifiy a couple of things for relx, such as where the
 OSv specific ERTS is located. rebar3_osv includes a base OSv image,
 but you can specify your own if required, as well as tweaking the
-command line used to start applications, turn on 'verbose' output etc. See below for how
+command line used to start applications, turn on 'verbose' output
+etc. See below for how
 
     {profiles,
      [
@@ -101,8 +102,8 @@ GitHub. We also maintain a compiled version so you do not need to
 download and compile Erlang/OTP to get going with this.
 
 
-Limitations
-===========
+Limitations for Erlang under OSv
+================================
 
  1. rebar3_osv must be run on Linux x86_64, as the release is uploaded by running the image under kvm/qemu and transfering in the release files.
  2. Needs to use the modified OTP (currently based on 21.0) and this needs to match that installed on the system
@@ -115,29 +116,43 @@ Building your own OSv Image
 
 Building your own OSv image is relatively straightforward. Checkout
 the OSv code from https://github.com/cloudius-systems/osv and update
-the submodules. We add a module to include the system libraries our
-ERTS system needs (ie. openssl, libz and ncurses):
-
-    [rickp@nuc1 ~/src/osv(rickp-wip)]$ cat modules/erlang-libs/module.py
-    import os
-    from osv.modules.api import *
-    from osv.modules.filemap import FileMap
-    from osv.modules import api
-
-    _module = '${OSV_BASE}/modules/erlang-libs'
-
-    api.require("openssl")
-    api.require("libz")
-    api.require("ncurses")
-
-    default = ""
+the submodules. 
 
 Then its just a case of compiling:
 
-  $ scripts/build -j4 fs_size_mb=200 image=cloud-init,httpserver,erlang-libs
+  $ scripts/build -j4 fs_size_mb=200 image=cloud-init,httpserver,openssl,libz,ncurses
 
 If you want a debug image, use:
 
-  $ scripts/build -j4 mode=debug fs_size_mb=200 image=cloud-init,httpserver,erlang-libs
+  $ scripts/build -j4 mode=debug fs_size_mb=200 image=cloud-init,httpserver,openssl,libz,ncurses
 
-The fs_size_mb sets the size of the image FS, so if you need more storage, increase the size.
+The fs_size_mb sets the size of the image FS, so if you need more
+storage, increase the size. The file you need is in the
+build/*/usr.img - you can use either the debug or the release image,
+depending on what you need.
+
+Once built, you can reference this image from the rebar3 configuration using the osv_image variable:
+
+                {dev_mode, false}
+               , {include_src, false}
+               , {include_erts, "/usr/local/packages/otp-osv"}
+               , {system_libs, "/usr/local/packages/otp-osv"}
+               , {osv_image, "/home/rickp/osv/build/debug.x64/usr.img"}
+               %% , {verbose, true}
+
+How is the final image built
+============================
+
+The way the image is built is as follows:
+
+1. A release is generated using the OSv compatible ERTS. As this is
+generated using the host Erlang install, this probably needs to match
+the OSv specific ERTS (otherwise the boot scripts may be worng).
+
+2. The osv_image is copied to a new file (called after the application
+name) and started with the command that starts the cpio application.
+
+3. The release built in stepa 1 is CPIO-ed into the running image,
+along with a small starter program which takes the place of 'erl' -
+sets the appropriate environment variables, then loads erlexec and
+invokes main() to start erlang.
