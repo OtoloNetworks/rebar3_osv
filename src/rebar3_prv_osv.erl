@@ -55,6 +55,7 @@ do(State) ->
          OrigImage = proplists:get_value(osv_image, Params, BaseImage),
          NewImage = filename:join([OutDir, App ++ ".img"]),
          rebar_log:log(info, "Using base OSv Image ~s", [OrigImage]),
+         file:delete(NewImage),
          {ok, _Size} = file:copy(OrigImage, NewImage),
 
          %% Step 1a - alter command line
