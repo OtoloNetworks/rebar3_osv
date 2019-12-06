@@ -63,14 +63,15 @@ do(State) ->
                                "--norandom --noinit /tools/cpiod.so; /zfs.so set compression=off osv"),
 
          %% Step 2 - Start the qemu system with the NewImage...
+         rebar_log:log(debug, "Starting qemu....", []),
          QemuCmd = "qemu-system-x86_64 -m 512 -smp 1 -vnc none "
              %% ++ "-gdb tcp::1234,server,nowait "
              ++ "-device virtio-blk-pci,id=blk0,bootindex=0,drive=hd0,scsi=off "
              ++ "-drive file=" ++ NewImage ++ ",if=none,id=hd0,cache=unsafe,aio=threads "
-             ++ "-netdev user,id=un0,net=192.168.122.0/24,host=192.168.122.1 "
-             ++ "-device virtio-net-pci,netdev=un0 -redir tcp:10000::10000 -device virtio-rng-pci "
+             ++ "-netdev user,id=un0,net=192.168.122.0/24,host=192.168.122.1,hostfwd=tcp::10000-:10000 "
+             ++ "-device virtio-net-pci,netdev=un0 -device virtio-rng-pci "
              ++ "-cpu qemu64,+x2apic -chardev stdio,mux=on,id=stdio,signal=on "
-             ++ "-mon chardev=stdio,mode=readline,default -device isa-serial,chardev=stdio",
+             ++ "-mon chardev=stdio,mode=readline -device isa-serial,chardev=stdio",
          {ok, QPid, QOSPid} = exec:run(QemuCmd, [monitor
                                                  %%, {stdout, "/tmp/osv-cpio-output"}
                                                 ]),
