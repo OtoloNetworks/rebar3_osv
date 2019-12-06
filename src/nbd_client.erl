@@ -17,15 +17,15 @@
 -define(CONNECT_RETRY, 10).  %% 10 attempts
 -define(CONNECT_WAIT, 100).  %% Wait 100ms each time
 
--record(nbd, {
-          file,
-          port,
-          nbd_pid,
-          socket,
-          flags,
-          size,
-          request = 0
-         }).
+-record(nbd, 
+        { file
+        , port
+        , nbd_pid
+        , socket
+        , style
+        , flags
+        , request = 0
+        }).
 
 start(File) ->
     %% Pick a random port and start the qemu-nbd process on the file
@@ -34,6 +34,7 @@ start(File) ->
     rand:seed(exsplus, {I1, I2, I3}),
     Port = 10000 + rand:uniform(60000-10000),
     Cmd = lists:flatten(io_lib:format("qemu-nbd -p ~p ~s", [Port, File])),
+    rebar_log:log(debug, "Starting qemu-nbd", []),
     {ok, QPid, _OSPid} = exec:run(Cmd, [monitor]),
     
     %% Now to connect to the process...
@@ -41,13 +42,29 @@ start(File) ->
 
     NBD = #nbd{file = File, port = Port, nbd_pid = QPid,
                socket = Sock},
+    rebar_log:log(debug, "Connected...", []),
     {ok, handle_initial_handshake(NBD)}.
 
 handle_initial_handshake(#nbd{socket = Sock} = State) ->
-    Bytes = gen_tcp:recv(Sock, 28),
-    {ok, <<"NBDMAGIC", 16#420281861253:64, Size:64, Flags:32>>} = Bytes,
+    rebar_log:log(debug, "Receiving initial handshake", []),
+    {ok, Bytes} = gen_tcp:recv(Sock, 16),
+    handle_initial_handshake_1(State, Bytes).
+
+handle_initial_handshake_1(#nbd{socket = Sock} = State,
+                           <<"NBDMAGIC", 16#420281861253:64>>) ->
+    rebar_log:log(debug, "Parsing initial handoshake (old style)", []),
+    {ok, <<_Size:64, Flags:32>>} = gen_tcp:recv(12),
     {ok, _} = gen_tcp:recv(Sock, 124),
-    State#nbd{flags = Flags, size = Size}.
+    State#nbd{flags = Flags, style = old};
+handle_initial_handshake_1(#nbd{socket = Sock} = State,
+                           <<"NBDMAGIC", 16#49484156454F5054:64>>) ->
+    rebar_log:log(debug, "Parsing initial handshake (new style)", []),
+    {ok, Flags} = gen_tcp:recv(Sock, 2),
+    %% Send flags and then the 'EXPORT_NAME' option with no name...
+    ok = gen_tcp:send(Sock, <<0:32, 16#49484156454F5054:64, 1:32, 0:32>>),
+    {ok, _} = gen_tcp:recv(Sock, 134),
+    State#nbd{flags = Flags, style = new}.
+
 
 write(Data, Offset, #nbd{} = State) ->
     %% First step is to read in the sectors that include our target block...
