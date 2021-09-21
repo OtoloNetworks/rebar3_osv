@@ -35,7 +35,10 @@ etc. See below for how
                 {dev_mode, false}
                , {include_src, false}
                , {include_erts, "/usr/local/packages/otp-osv"}
-               , {system_libs, "/usr/local/packages/otp-osv"}
+               , {system_libs, "/usr/local/packages/otp-osv/lib"}
+               ]
+        {osv, [
+               %% {osv_image, "overidden_base.img"}
                %% , {verbose, true}
                ]
         }]
@@ -120,11 +123,11 @@ the submodules.
 
 Then its just a case of compiling:
 
-  $ scripts/build -j4 fs_size_mb=200 image=cloud-init,httpserver,openssl,libz,ncurses
+    $ scripts/build -j4 fs_size_mb=200 image=cloud-init,httpserver,openssl,libz,ncurses
 
 If you want a debug image, use:
 
-  $ scripts/build -j4 mode=debug fs_size_mb=200 image=cloud-init,httpserver,openssl,libz,ncurses
+    $ scripts/build -j4 mode=debug fs_size_mb=200 image=cloud-init,httpserver,openssl,libz,ncurses
 
 The fs_size_mb sets the size of the image FS, so if you need more
 storage, increase the size. The file you need is in the
@@ -133,11 +136,7 @@ depending on what you need.
 
 Once built, you can reference this image from the rebar3 configuration using the osv_image variable:
 
-                {dev_mode, false}
-               , {include_src, false}
-               , {include_erts, "/usr/local/packages/otp-osv"}
-               , {system_libs, "/usr/local/packages/otp-osv"}
-               , {osv_image, "/home/rickp/osv/build/debug.x64/usr.img"}
+               {osv_image, "/home/rickp/osv/build/debug.x64/usr.img"}
                %% , {verbose, true}
 
 How is the final image built

@@ -41,7 +41,7 @@ do(State) ->
          OutDir = rebar_dir:base_dir(State),
          ReleaseDir = filename:join([rebar_dir:base_dir(State), "rel", App]),
          PrivDir = code:priv_dir(rebar3_osv),
-         Params = rebar_state:get(State, relx, []),
+         Params = rebar_state:get(State, osv, []),
          Verbose =  proplists:get_value(verbose, Params, false),
          AdditionalCmdLine = proplists:get_value(command_line, Params, ""),
 

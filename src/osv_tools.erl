@@ -56,6 +56,7 @@ cpio_file(Sock, File, Name) ->
     ok.
 
 set_cmdline(Image, Cmdline) ->
+    rebar_log:log(debug, "Setting cmdline to ~p", [Cmdline]),
     C = erlang:list_to_binary(Cmdline),
     {ok, S1} = nbd_client:start(Image),
     {0, S2} = nbd_client:write(<<C/binary, 0:8>>, ?ARGS_OFFSET, S1),
